@@ -1,3 +1,6 @@
+#This fork was necessary for GS-238. See branch https://github.com/ArcBees/jacc/tree/spg_channel_api_fix for my dirty
+ fixes
+
 Java AppEngine Channel Client
 
 This directory contains a simple framework that allows you to interact with Google AppEngine Channels from a Java client.
