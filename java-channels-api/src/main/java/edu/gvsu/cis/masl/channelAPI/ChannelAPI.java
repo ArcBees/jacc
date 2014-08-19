@@ -30,7 +30,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ChannelAPI {
-	
+
     private enum ReadyState {CONNECTING, OPEN, CLOSING, CLOSED};
 
     private String BASE_URL = "http://localhost:8888"; //Defaults to LocalHost
@@ -48,7 +48,7 @@ public class ChannelAPI {
     private Integer TIMEOUT_MS = 500;
     private HttpClient httpClient = new DefaultHttpClient();
     private Thread thPoll = null;
-    
+
     /**
      * Default Constructor
      */
@@ -61,7 +61,7 @@ public class ChannelAPI {
     	this.messageId = 1;
     	this.applicationKey = null;
     }
-    
+
     /**
      * Create A Channel, Using URL, ChannelKey and a ChannelService
      * @param URL - Server Location - http://localhost:8888
@@ -72,19 +72,21 @@ public class ChannelAPI {
      * @throws IOException JSON Related
      * @throws ClientProtocolException Connection Related
      */
-    public ChannelAPI(String URL, String channelKey, ChannelService channelService) throws IOException, ClientProtocolException {
+    public ChannelAPI(String URL, String channelKey, String token, ChannelService channelService) throws IOException,
+            ClientProtocolException {
     	this.clientId = null;
     	this.BASE_URL = URL;
     	this.requestId = 0;
     	this.messageId = 1;
-    	this.channelId = createChannel(channelKey);
+//    	this.channelId = createChannel(channelKey);
+    	this.channelId = token;
     	this.applicationKey = channelKey;
-    	
+
     	if (channelListener != null) {
             this.channelListener = channelService;
         }
     }
-    
+
     /**
      * Ability to join an existing Channel with a full channel token, URL, and ChannelService
      * @param URL - Server Location - http://localhost:8888
@@ -96,14 +98,14 @@ public class ChannelAPI {
     	this.clientId = null;
     	this.BASE_URL = URL;
         this.channelId = token;
-        
-        
+
+
         this.applicationKey = this.channelId.substring(this.channelId.lastIndexOf("-") + 1);
         if (channelListener != null) {
             this.channelListener = channelService;
         }
     }
-    
+
     /**
      * Create a Channel on the Server and return the channelID + Key
      * @param key
@@ -125,7 +127,7 @@ public class ChannelAPI {
 		}
     	return token;
     }
-    
+
 
     /**
      * Connect to the Channel
@@ -136,7 +138,7 @@ public class ChannelAPI {
     public void open() throws IOException, ChannelException {
     	this.readyState = ReadyState.CONNECTING;
     	if(this.BASE_URL.contains("localhost")){ //Local Development Mode
-            connect(sendGet(getUrl("connect"))); 
+            connect(sendGet(getUrl("connect")));
     	} else { //Production - AppEngine Mode
     		initialize();
             fetchSid();
@@ -144,7 +146,7 @@ public class ChannelAPI {
             longPoll();
     	}
     }
-    
+
     /**
      * Sets up the initial connection, passes in the token
      */
@@ -158,9 +160,9 @@ public class ChannelAPI {
             xpc.put("ppu", this.BASE_URL + this.CHANNEL_URL + "xpc_blank");
 
 		} catch (JSONException e1) {
-			
+
 		}
-        
+
         List<NameValuePair> params = new ArrayList<NameValuePair>();
         params.add(new BasicNameValuePair("token", this.channelId));
         params.add(new BasicNameValuePair("xpc", xpc.toString()));
@@ -204,12 +206,12 @@ public class ChannelAPI {
             throw new ChannelException(e);
         }
     }
-    
+
     /**
      * Fetches and parses the SID, which is a kind of session ID.
      */
     private void fetchSid() throws ChannelException {
-    	
+
         String uri = getBindString(new BasicNameValuePair("CVER", "1"));
 
         HttpPost httpPost = new HttpPost(uri);
@@ -219,7 +221,7 @@ public class ChannelAPI {
         try {
             httpPost.setEntity(new UrlEncodedFormEntity(data));
         } catch (UnsupportedEncodingException e) {
-        	
+
         }
 
         TalkMessageParser parser = null;
@@ -249,7 +251,7 @@ public class ChannelAPI {
             }
         }
     }
-    
+
     /**
      * We need to make this "connect" request to set up the binding.
      */
@@ -284,7 +286,7 @@ public class ChannelAPI {
 
         this.channelListener.onOpen();
     }
-    
+
     /**
      * Gets the URL to the "/bind" endpoint.
      */
@@ -305,10 +307,10 @@ public class ChannelAPI {
 
         params.add(new BasicNameValuePair("RID", Integer.toString(this.requestId)));
         this.requestId ++;
-        
+
         return this.PROD_TALK_URL + "dch/bind?VER=8&" + URLEncodedUtils.format(params, "UTF-8");
     }
-    
+
     /**
      * Grabbing Data "Production" Path
      */
@@ -372,7 +374,7 @@ public class ChannelAPI {
     }
 
     /**
-     * Used each time we receive a message on the Production side, 
+     * Used each time we receive a message on the Production side,
      * filters garbage data from actual data
      */
     private void handleMessage(TalkMessage msg) {
@@ -573,13 +575,20 @@ public class ChannelAPI {
                 throws IOException {
             String str = "";
             for(int ch = reader.read(); ch > 0 && ch != quote; ch = reader.read()) {
+                boolean add = true;
                 if (ch == '\\') {
                     ch = reader.read();
                     if (ch < 0) {
                         break;
                     }
+
+                    if (ch == 'n') {
+                        add = false;
+                    }
                 }
-                str += (char) ch;
+                if (add) {
+                    str += (char) ch;
+                }
             }
 
             return str;
@@ -680,7 +689,7 @@ public class ChannelAPI {
         this.readyState = ReadyState.CLOSING;
         disconnect(sendGet(getUrl("disconnect")));
     }
-    
+
     /**
      * A helper method that consumes an HttpEntity so that the HttpClient can be reused. If you're
      * not planning to run on Android, you can use the non-deprecated EntityUtils.consume() method
@@ -744,7 +753,7 @@ public class ChannelAPI {
     }
 
     /**
-     * 
+     *
      * @param xhr
      */
     private void forwardMessage(XHR xhr) {
@@ -838,7 +847,7 @@ public class ChannelAPI {
         HttpGet httpGet = new HttpGet(url);
         return new XHR(httpClient.execute(httpGet));
     }
-    
+
     /**
 	 * Set a new ChannelListener
 	 * @param channelListener
@@ -848,7 +857,7 @@ public class ChannelAPI {
 		    this.channelListener = channelListener;
 		}
 	}
-    
+
     /**
      * This exception is thrown in case of errors.
      */
